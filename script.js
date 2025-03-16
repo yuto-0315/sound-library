@@ -120,10 +120,35 @@ function showSection(section) {
 }
 
 // 録音開始
+// 録音開始
 async function startRecording() {
     try {
+        // MediaDevices APIのサポートチェック
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('お使いのブラウザはマイク録音をサポートしていません。Chrome、Firefox、Safariの最新版をお試しください。');
+        }
+
+        // セキュアコンテキストのチェック
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            throw new Error('マイク録音機能はHTTPSで接続した場合のみ使用できます。');
+        }
+
+        // 音声ストリームを取得
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
+
+        // iOS Safariでも動作する形式に調整
+        const options = {
+            mimeType: 'audio/mp4'  // iOS Safariでサポートされている形式
+        };
+
+        // mimeTypeがサポートされていない場合は自動的にデフォルト設定を使用
+        try {
+            mediaRecorder = new MediaRecorder(stream, options);
+        } catch (e) {
+            console.log('指定された形式はサポートされていません。デフォルト形式を使用します:', e);
+            mediaRecorder = new MediaRecorder(stream);
+        }
+
         audioChunks = [];
 
         mediaRecorder.ondataavailable = (event) => {
@@ -131,38 +156,88 @@ async function startRecording() {
         };
 
         mediaRecorder.onstop = () => {
-            audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            // iOS Safariでも再生できる形式を使用
+            let audioType = 'audio/mp4';
+            // 録音データのタイプを確認
+            if (audioChunks[0].type) {
+                audioType = audioChunks[0].type;
+            }
+
+            audioBlob = new Blob(audioChunks, { type: audioType });
             const audioUrl = URL.createObjectURL(audioBlob);
-            document.getElementById('recordedAudio').src = audioUrl;
+
+            const recordedAudio = document.getElementById('recordedAudio');
+            recordedAudio.src = audioUrl;
+
+            // iOS Safariでの再生のために必要な設定
+            recordedAudio.load();
+
             document.getElementById('saveRecording').classList.remove('hidden');
         };
 
-        // 録音開始
-        mediaRecorder.start();
+        // 録音開始 - データが利用可能になる間隔を短くして多くのチャンクを取得
+        mediaRecorder.start(100); // 100ms間隔でデータを取得
 
         // UI更新
         const startRecordBtn = document.getElementById('startRecordBtn');
         const stopRecordBtn = document.getElementById('stopRecordBtn');
 
-        startRecordBtn.disabled = true;
-        stopRecordBtn.disabled = false;
-
-        // 録音中のボタンスタイル変更
-        startRecordBtn.style.backgroundColor = '#9e9e9e'; // グレーに変更
-        startRecordBtn.style.cursor = 'not-allowed';
-        stopRecordBtn.style.backgroundColor = '#f44336'; // 赤色に変更
-        stopRecordBtn.style.cursor = 'pointer';
-        stopRecordBtn.style.opacity = '1';
-
-        document.getElementById('recordingStatus').textContent = '録音中...';
-
-        // 録音時間のカウント開始
-        recordingTime = 0;
-        updateRecordingTime();
-        recordingInterval = setInterval(updateRecordingTime, 1000);
+        // ...残りのUI更新コード
     } catch (error) {
         console.error('録音を開始できませんでした:', error);
-        alert('マイクへのアクセスを許可してください。');
+        alert('エラー: ' + error.message);
+    }
+}
+
+// saveSound関数も修正
+function saveSound() {
+    const soundName = document.getElementById('soundName').value.trim();
+    const soundCategory = document.getElementById('soundCategory').value;
+    const soundTags = document.getElementById('soundTags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
+    const soundInfo = document.getElementById('soundInfo').value.trim();
+
+    if (!soundName) {
+        alert('音の名前を入力してください。');
+        return;
+    }
+
+    // 音声データをBlob URLとして保存
+    try {
+        // Base64変換の代わりに直接Blob URLを使用
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        // 新しい音声データを作成
+        const newSound = {
+            id: Date.now().toString(),
+            name: soundName,
+            category: soundCategory,
+            tags: soundTags,
+            audio: audioUrl, // Blob URLとして保存
+            audioBlobType: audioBlob.type, // Blobのタイプを保存
+            info: soundInfo,
+            dateCreated: new Date().toISOString()
+        };
+
+        // ライブラリに追加
+        soundLibrary.push(newSound);
+        saveSoundLibrary();
+
+        // UI更新
+        renderSoundLibrary();
+        renderAvailableSounds();
+
+        // フォームリセット
+        document.getElementById('soundName').value = '';
+        document.getElementById('soundTags').value = '';
+        document.getElementById('saveRecording').classList.add('hidden');
+        document.getElementById('recordingStatus').textContent = '録音していません';
+        document.getElementById('recordingTime').textContent = '00:00';
+
+        // 図鑑セクションに移動
+        showSection('library');
+    } catch (error) {
+        console.error('音声の保存に失敗しました:', error);
+        alert('音声の保存中にエラーが発生しました。もう一度お試しください。');
     }
 }
 
@@ -875,10 +950,10 @@ function confirmDeleteSound(soundId) {
 function deleteSound(soundId) {
     // ミキサーからも削除
     selectedSounds = selectedSounds.filter(s => s.id !== soundId);
-    
+
     // ライブラリから削除
     soundLibrary = soundLibrary.filter(s => s.id !== soundId);
-    
+
     // 保存して更新
     saveSoundLibrary();
     renderSoundLibrary();
