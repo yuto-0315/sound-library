@@ -43,6 +43,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const stopMixBtn = document.getElementById('stopMixBtn');
     const clearMixBtn = document.getElementById('clearMixBtn');
 
+    // エクスポート・インポート機能のイベントリスナー
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const importFile = document.getElementById('importFile');
+
+    if (exportBtn) exportBtn.addEventListener('click', exportSounds);
+    if (importBtn) importBtn.addEventListener('click', () => importFile.click());
+    if (importFile) importFile.addEventListener('change', importSounds);
+
+
     // ローカルストレージから音のライブラリを読み込み
     loadSoundLibrary();
 
@@ -136,14 +146,14 @@ async function startRecording() {
 
         startRecordBtn.disabled = true;
         stopRecordBtn.disabled = false;
-        
+
         // 録音中のボタンスタイル変更
         startRecordBtn.style.backgroundColor = '#9e9e9e'; // グレーに変更
         startRecordBtn.style.cursor = 'not-allowed';
         stopRecordBtn.style.backgroundColor = '#f44336'; // 赤色に変更
         stopRecordBtn.style.cursor = 'pointer';
         stopRecordBtn.style.opacity = '1';
-        
+
         document.getElementById('recordingStatus').textContent = '録音中...';
 
         // 録音時間のカウント開始
@@ -176,17 +186,17 @@ function stopRecording() {
         // UI更新
         const startRecordBtn = document.getElementById('startRecordBtn');
         const stopRecordBtn = document.getElementById('stopRecordBtn');
-        
+
         startRecordBtn.disabled = false;
         stopRecordBtn.disabled = true;
-        
+
         // ボタンスタイルを元に戻す
         startRecordBtn.style.backgroundColor = '#f44336'; // 赤に戻す
         startRecordBtn.style.cursor = 'pointer';
         stopRecordBtn.style.backgroundColor = '#9e9e9e'; // グレーに戻す
         stopRecordBtn.style.opacity = '0.5';
         stopRecordBtn.style.cursor = 'not-allowed';
-        
+
         document.getElementById('recordingStatus').textContent = '録音完了';
     }
 }
@@ -250,6 +260,20 @@ function loadSoundLibrary() {
     const saved = localStorage.getItem('soundLibrary');
     if (saved) {
         soundLibrary = JSON.parse(saved);
+
+        // 相対パスのオーディオデータを修正（初期データの場合）
+        soundLibrary = soundLibrary.map(sound => {
+            // オーディオが空または相対パスで始まる場合は修正
+            if (!sound.audio || sound.audio.startsWith('./')) {
+                // idが"1"の場合はbird.mp3、"2"の場合はrain.mp3に設定
+                if (sound.id === '1') {
+                    sound.audio = './bird.mp3';
+                } else if (sound.id === '2') {
+                    sound.audio = './rain.mp3';
+                }
+            }
+            return sound;
+        });
     } else {
         // サンプルの音データを追加
         soundLibrary = [
@@ -258,7 +282,8 @@ function loadSoundLibrary() {
                 name: '鳥のさえずり',
                 category: '自然',
                 tags: ['鳥', '朝', '公園'],
-                audio: '', // サンプル音声のBase64データ
+                audio: './bird.mp3', // 相対パスで指定
+                info: '朝の公園で聞こえる小鳥のさえずりです。',
                 dateCreated: new Date().toISOString()
             },
             {
@@ -266,10 +291,13 @@ function loadSoundLibrary() {
                 name: '雨の音',
                 category: '自然',
                 tags: ['雨', '水', '静か'],
-                audio: '', // サンプル音声のBase64データ
+                audio: './rain.mp3', // 相対パスで指定
+                info: '静かな雨の日に聞こえる雨音です。',
                 dateCreated: new Date().toISOString()
             }
         ];
+        // 初期データを保存
+        saveSoundLibrary();
     }
 }
 
@@ -292,16 +320,30 @@ function renderSoundLibrary() {
         const tagsHTML = sound.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
 
         // 学習情報があれば表示
-        const infoHTML = sound.info ? 
+        const infoHTML = sound.info ?
             `<div class="sound-info"><p>${convertTextForGrade(sound.info)}</p></div>` : '';
 
+        // audioのsrc属性を正しく設定
+        const audioSrc = sound.audio || '';
+
+        // 削除ボタンを追加
         soundCard.innerHTML = `
-            <h4>${sound.name}</h4>
+            <div class="sound-card-header">
+                <h4>${sound.name}</h4>
+                <button class="delete-sound" title="削除する">✕</button>
+            </div>
             <span class="category">${sound.category}</span>
-            <audio controls src="${sound.audio}"></audio>
+            <audio controls src="${audioSrc}"></audio>
             ${infoHTML}
             <div class="tags">${tagsHTML}</div>
         `;
+
+        // 削除ボタンのイベントリスナー
+        const deleteBtn = soundCard.querySelector('.delete-sound');
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // カードのクリックイベントが発火しないようにする
+            confirmDeleteSound(sound.id);
+        });
 
         // ミキサーに追加するためのドラッグ機能
         soundCard.draggable = true;
@@ -318,7 +360,10 @@ function renderAvailableSounds() {
     const availableSoundsList = document.getElementById('availableSoundsList');
     availableSoundsList.innerHTML = '';
 
+    console.log("soundLibrary:", soundLibrary);
     soundLibrary.forEach(sound => {
+
+        console.log("sound:", sound);
         const soundItem = document.createElement('div');
         soundItem.className = 'sound-item';
         soundItem.dataset.id = sound.id;
@@ -419,10 +464,11 @@ function playMix() {
         alert('再生する音が選択されていません。音を追加してください。');
         return;
     }
-    
+
     // 各音声を再生
     audioPlayers = selectedSounds.map(sound => {
-        const audio = new Audio(sound.audio);
+        const audioSrc = sound.audio || '';
+        const audio = new Audio(audioSrc);
         audio.play();
         return audio;
     });
@@ -450,29 +496,29 @@ function clearMix() {
 function filterSounds() {
     const searchText = document.getElementById('searchInput').value.toLowerCase();
     const category = document.getElementById('categoryFilter').value;
-    
+
     const soundCards = document.querySelectorAll('#soundLibrary .sound-card');
-    
+
     soundCards.forEach(card => {
         const soundId = card.dataset.id;
         const sound = soundLibrary.find(s => s.id === soundId);
-        
+
         if (!sound) return;
-        
+
         const nameMatch = sound.name.toLowerCase().includes(searchText);
         const tagsMatch = sound.tags.some(tag => tag.toLowerCase().includes(searchText));
         const categoryMatch = category === 'all' || sound.category === category;
-        
+
         const shouldShow = (nameMatch || tagsMatch) && categoryMatch;
-        
+
         card.style.display = shouldShow ? 'block' : 'none';
     });
 }
 
 // 学年に応じたテキスト変換関数（現在はそのまま返すだけ）
 function convertTextForGrade(text) {
-  if (!text) return '';
-  return text;
+    if (!text) return '';
+    return text;
 }
 
 // 波形表示機能を修正
@@ -486,92 +532,127 @@ function addWaveformVisualization() {
     waveformCanvas.style.backgroundColor = '#f0f0f0';
     waveformCanvas.style.marginTop = '10px';
     waveformCanvas.style.display = 'none';
-    
+
     recordContainer.appendChild(waveformCanvas);
-    
-    // 録音開始時の元の関数を保存
-    const originalStartRecording = window.startRecording;
-    
-    // 録音開始関数を上書き
-    window.startRecording = async function() {
+
+    // 録音開始ボタンのイベントリスナーを置き換え
+    const startRecordBtn = document.getElementById('startRecordBtn');
+
+    // 元のイベントリスナーを削除
+    const newStartRecordBtn = startRecordBtn.cloneNode(true);
+    startRecordBtn.parentNode.replaceChild(newStartRecordBtn, startRecordBtn);
+
+    // 新しいイベントリスナーを追加
+    newStartRecordBtn.addEventListener('click', async function () {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
             // 波形分析用のAudioContextを作成
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const analyser = audioContext.createAnalyser();
             const microphone = audioContext.createMediaStreamSource(stream);
             microphone.connect(analyser);
-            
+
             analyser.fftSize = 2048;
             const bufferLength = analyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
-            
+
             // 波形の描画
             const canvas = document.getElementById('waveformCanvas');
             canvas.style.display = 'block';
             const canvasCtx = canvas.getContext('2d');
-            
+
             // 波形描画のアニメーション
             let animationId;
             function drawWaveform() {
                 animationId = requestAnimationFrame(drawWaveform);
-                
+
                 analyser.getByteTimeDomainData(dataArray);
-                
+
                 canvasCtx.fillStyle = '#f0f0f0';
                 canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-                
+
                 canvasCtx.lineWidth = 2;
                 canvasCtx.strokeStyle = '#4CAF50';
                 canvasCtx.beginPath();
-                
+
                 const sliceWidth = canvas.width * 1.0 / bufferLength;
                 let x = 0;
-                
+
                 for (let i = 0; i < bufferLength; i++) {
                     const v = dataArray[i] / 128.0;
                     const y = v * canvas.height / 2;
-                    
+
                     if (i === 0) {
                         canvasCtx.moveTo(x, y);
                     } else {
                         canvasCtx.lineTo(x, y);
                     }
-                    
+
                     x += sliceWidth;
                 }
-                
+
                 canvasCtx.lineTo(canvas.width, canvas.height / 2);
                 canvasCtx.stroke();
             }
-            
+
             drawWaveform();
-            
-            // 元の録音開始関数を呼び出す
-            await originalStartRecording.call(this, stream);
-            
-            // 録音停止時に波形表示も停止するように設定
-            const originalStopRecording = window.stopRecording;
-            window.stopRecording = function() {
+
+            // 通常の録音開始処理
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                // 波形表示を停止
                 if (animationId) {
                     cancelAnimationFrame(animationId);
                 }
                 canvas.style.display = 'none';
-                originalStopRecording.call(this);
+
+                audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                document.getElementById('recordedAudio').src = audioUrl;
+                document.getElementById('saveRecording').classList.remove('hidden');
             };
-            
+
+            // 録音開始
+            mediaRecorder.start();
+
+            // UI更新
+            const stopRecordBtn = document.getElementById('stopRecordBtn');
+
+            newStartRecordBtn.disabled = true;
+            stopRecordBtn.disabled = false;
+
+            // 録音中のボタンスタイル変更
+            newStartRecordBtn.style.backgroundColor = '#9e9e9e'; // グレーに変更
+            newStartRecordBtn.style.cursor = 'not-allowed';
+            stopRecordBtn.style.backgroundColor = '#f44336'; // 赤色に変更
+            stopRecordBtn.style.cursor = 'pointer';
+            stopRecordBtn.style.opacity = '1';
+
+            document.getElementById('recordingStatus').textContent = '録音中...';
+
+            // 録音時間のカウント開始
+            recordingTime = 0;
+            updateRecordingTime();
+            recordingInterval = setInterval(updateRecordingTime, 1000);
         } catch (error) {
             console.error('録音を開始できませんでした:', error);
             alert('マイクへのアクセスを許可してください。');
         }
-    };
+    });
 }
 
 // 音に学習情報を追加する機能
 function addLearningInfo() {
     // 新規保存時に学習情報を追加できるフォーム要素を追加
     const saveRecordingDiv = document.getElementById('saveRecording');
-    
+
     const learningInfoDiv = document.createElement('div');
     learningInfoDiv.className = 'form-group';
     learningInfoDiv.innerHTML = `
@@ -581,8 +662,226 @@ function addLearningInfo() {
                   rows="4" 
                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
     `;
-    
+
     // 保存ボタンの前に挿入
     const saveSoundBtn = document.getElementById('saveSoundBtn');
     saveRecordingDiv.insertBefore(learningInfoDiv, saveSoundBtn);
+}
+
+// 音声データをエクスポート
+function exportSounds() {
+    if (soundLibrary.length === 0) {
+        alert('エクスポートする音声データがありません。');
+        return;
+    }
+
+    // エクスポートデータの作成
+    const exportData = {
+        version: '1.0',
+        date: new Date().toISOString(),
+        sounds: soundLibrary
+    };
+
+    // JSONデータの作成
+    const jsonData = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    // ダウンロード用のリンク作成
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `音の図鑑_${formatDate(new Date())}.json`;
+    document.body.appendChild(a);
+    a.click();
+
+    // クリーンアップ
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
+}
+
+// 音声データをインポート
+function importSounds(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const importData = JSON.parse(e.target.result);
+
+            // バージョンチェック（必要に応じて）
+            if (!importData.version || !importData.sounds || !Array.isArray(importData.sounds)) {
+                throw new Error('インポートファイルの形式が正しくありません。');
+            }
+
+            // インポート確認モーダルを表示
+            showImportConfirmDialog(importData.sounds);
+        } catch (error) {
+            alert(`エラー: ${error.message}`);
+        }
+
+        // ファイル選択をリセット
+        event.target.value = '';
+    };
+
+    reader.readAsText(file);
+}
+
+// インポート確認ダイアログを表示
+function showImportConfirmDialog(importedSounds) {
+    // モーダルを作成
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+
+    const newSoundsCount = importedSounds.length;
+    const duplicatesCount = countDuplicates(importedSounds);
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>音声データのインポート</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>${newSoundsCount}個の音声データが見つかりました。</p>
+                <p>${duplicatesCount}個の音声データは既に登録されているかもしれません。</p>
+                <p>インポート方法を選択してください：</p>
+            </div>
+            <div class="modal-footer">
+                <button id="importAppend" class="action-button">追加</button>
+                <button id="importReplace" class="action-button">すべて置換</button>
+                <button id="importCancel" class="action-button">キャンセル</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+
+    // イベントリスナーを設定
+    modal.querySelector('.close-modal').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+
+    modal.querySelector('#importAppend').addEventListener('click', () => {
+        processImportedSounds(importedSounds, false);
+        document.body.removeChild(modal);
+    });
+
+    modal.querySelector('#importReplace').addEventListener('click', () => {
+        processImportedSounds(importedSounds, true);
+        document.body.removeChild(modal);
+    });
+
+    modal.querySelector('#importCancel').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+}
+
+// インポートデータの重複をカウント
+function countDuplicates(importedSounds) {
+    let count = 0;
+    importedSounds.forEach(imported => {
+        if (soundLibrary.some(existing =>
+            existing.name === imported.name &&
+            existing.category === imported.category)) {
+            count++;
+        }
+    });
+    return count;
+}
+
+// インポートした音声データを処理
+function processImportedSounds(importedSounds, replace) {
+    if (replace) {
+        // 置き換えモード
+        soundLibrary = [...importedSounds];
+    } else {
+        // 追加モード（既存IDとの競合を回避）
+        const existingIds = new Set(soundLibrary.map(sound => sound.id));
+
+        importedSounds.forEach(sound => {
+            // IDが重複する場合は新しいIDを割り当て
+            if (existingIds.has(sound.id)) {
+                sound.id = Date.now().toString() + Math.floor(Math.random() * 1000);
+            }
+            soundLibrary.push(sound);
+        });
+    }
+
+    // ライブラリを保存して更新
+    saveSoundLibrary();
+    renderSoundLibrary();
+    renderAvailableSounds();
+
+    alert(`${importedSounds.length}個の音声データをインポートしました。`);
+}
+
+// 日付をフォーマット（YYYY-MM-DD）
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// 音の削除確認ダイアログを表示
+function confirmDeleteSound(soundId) {
+    const sound = soundLibrary.find(s => s.id === soundId);
+    if (!sound) return;
+
+    // モーダル作成
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>音の削除</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>"${sound.name}"を図鑑から削除しますか？</p>
+                <p class="warning">この操作は取り消せません。</p>
+            </div>
+            <div class="modal-footer">
+                <button id="confirmDelete" class="action-button" style="background-color: #F44336;">削除する</button>
+                <button id="cancelDelete" class="action-button">キャンセル</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+
+    // イベントリスナー設定
+    modal.querySelector('.close-modal').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+
+    modal.querySelector('#cancelDelete').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+
+    modal.querySelector('#confirmDelete').addEventListener('click', () => {
+        deleteSound(soundId);
+        document.body.removeChild(modal);
+    });
+}
+
+// 音をライブラリから削除
+function deleteSound(soundId) {
+    // ミキサーからも削除
+    selectedSounds = selectedSounds.filter(s => s.id !== soundId);
+    
+    // ライブラリから削除
+    soundLibrary = soundLibrary.filter(s => s.id !== soundId);
+    
+    // 保存して更新
+    saveSoundLibrary();
+    renderSoundLibrary();
+    renderAvailableSounds();
+    updateSelectedSoundsUI();
 }

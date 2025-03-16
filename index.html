@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>音の図鑑</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <header>
         <h1>音の図鑑</h1>
@@ -71,6 +73,11 @@
                         <option value="その他">その他</option>
                     </select>
                 </div>
+                <div class="export-import-controls">
+                    <button id="exportBtn" class="action-button">エクスポート</button>
+                    <button id="importBtn" class="action-button">インポート</button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;">
+                </div>
             </div>
             <div id="soundLibrary" class="sound-grid">
                 <!-- 音のカードがここに表示されます -->
@@ -105,4 +112,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>

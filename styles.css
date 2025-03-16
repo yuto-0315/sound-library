@@ -360,6 +360,143 @@ footer {
     opacity: 0.5;
 }
 
+/* 追加・削除ボタンのスタイル */
+.add-to-mix, .remove-from-mix {
+    border: none;
+    border-radius: 4px;
+    padding: 0.4rem 0.8rem;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    width: 100%;
+    text-align: center;
+}
+
+.add-to-mix {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.add-to-mix:hover {
+    background-color: #388E3C;
+    transform: scale(1.03);
+}
+
+.remove-from-mix {
+    background-color: #F44336;
+    color: white;
+}
+
+.remove-from-mix:hover {
+    background-color: #D32F2F;
+    transform: scale(1.03);
+}
+
+/* エクスポート・インポートボタンのスタイル */
+.export-import-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.action-button {
+    background-color: #81C784;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.action-button:hover {
+    background-color: #4CAF50;
+}
+
+/* モーダル関連のスタイル */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 15% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 500px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.modal-header h3 {
+    margin: 0;
+}
+
+.close-modal {
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* 音カードのヘッダー部分のレイアウト */
+.sound-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+/* 削除ボタンのスタイル */
+.delete-sound {
+    background-color: transparent;
+    color: #F44336;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.delete-sound:hover {
+    background-color: rgba(244, 67, 54, 0.1);
+    transform: scale(1.1);
+}
+
+/* 警告メッセージのスタイル */
+.warning {
+    color: #F44336;
+    font-weight: bold;
+    margin-top: 0.5rem;
+}
+
 /* 汎用クラス */
 .hidden {
     display: none;
