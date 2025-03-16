@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音の図鑑</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>音の図鑑</h1>
+        <nav>
+            <button id="recordBtn">音を録音する</button>
+            <button id="libraryBtn" class="active">図鑑を見る</button>
+            <button id="mixerBtn">音を組み合わせる</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- 録音セクション -->
+        <section id="recordSection" class="hidden">
+            <h2>音を録音する</h2>
+            <div class="record-container">
+                <button id="startRecordBtn" class="record-button">録音開始</button>
+                <button id="stopRecordBtn" class="record-button" disabled>録音停止</button>
+                <div id="recordingStatus">録音していません</div>
+                <div id="recordingTime">00:00</div>
+            </div>
+            <div id="saveRecording" class="hidden">
+                <h3>録音した音を保存する</h3>
+                <div class="form-group">
+                    <label for="soundName">名前：</label>
+                    <input type="text" id="soundName" placeholder="例：鳥のさえずり">
+                </div>
+                <div class="form-group">
+                    <label for="soundCategory">分類：</label>
+                    <select id="soundCategory">
+                        <option value="自然">自然の音</option>
+                        <option value="動物">動物の音</option>
+                        <option value="楽器">楽器の音</option>
+                        <option value="生活">生活の音</option>
+                        <option value="その他">その他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="soundTags">タグ：</label>
+                    <input type="text" id="soundTags" placeholder="カンマ区切りで入力 (例：鳥,朝,公園)">
+                </div>
+                <div class="audio-preview">
+                    <audio id="recordedAudio" controls></audio>
+                </div>
+                <button id="saveSoundBtn">保存する</button>
+            </div>
+        </section>
+
+        <!-- 図鑑セクション -->
+        <section id="librarySection">
+            <h2>音の図鑑</h2>
+            <div class="filter-container">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="音を検索...">
+                </div>
+                <div class="category-filter">
+                    <label>分類でさがす：</label>
+                    <select id="categoryFilter">
+                        <option value="all">すべて</option>
+                        <option value="自然">自然の音</option>
+                        <option value="動物">動物の音</option>
+                        <option value="楽器">楽器の音</option>
+                        <option value="生活">生活の音</option>
+                        <option value="その他">その他</option>
+                    </select>
+                </div>
+            </div>
+            <div id="soundLibrary" class="sound-grid">
+                <!-- 音のカードがここに表示されます -->
+            </div>
+        </section>
+
+        <!-- ミキサーセクション -->
+        <section id="mixerSection" class="hidden">
+            <h2>音を組み合わせる</h2>
+            <div class="mixer-container">
+                <div id="selectedSounds" class="selected-sounds">
+                    <p>ここに音をドラッグして組み合わせよう！</p>
+                </div>
+                <div class="mixer-controls">
+                    <button id="playMixBtn">再生</button>
+                    <button id="stopMixBtn">停止</button>
+                    <button id="clearMixBtn">クリア</button>
+                </div>
+            </div>
+            <div class="available-sounds">
+                <h3>使える音</h3>
+                <div id="availableSoundsList" class="sound-grid small">
+                    <!-- 利用可能な音がここに表示されます -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>音の図鑑 - 小学校の音楽づくり学習用Webアプリ</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

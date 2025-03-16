@@ -1,0 +1,366 @@
+/* 全体のスタイル設定 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+}
+
+body {
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+}
+
+header {
+    background-color: #4CAF50;
+    color: white;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: #2E7D32;
+}
+
+h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.8rem;
+    color: #388E3C;
+}
+
+nav {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+nav button {
+    background-color: #81C784;
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+}
+
+nav button:hover {
+    background-color: #66BB6A;
+}
+
+nav button.active {
+    background-color: #2E7D32;
+    font-weight: bold;
+}
+
+main {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+section {
+    background-color: white;
+    border-radius: 10px;
+    padding: 2rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+footer {
+    background-color: #4CAF50;
+    color: white;
+    text-align: center;
+    padding: 1rem;
+    margin-top: 2rem;
+}
+
+/* 録音セクションのスタイル */
+.record-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.record-button {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#startRecordBtn {
+    background-color: #f44336;
+}
+
+#startRecordBtn:hover {
+    background-color: #d32f2f;
+}
+
+#stopRecordBtn {
+    background-color: #9e9e9e;
+}
+
+#stopRecordBtn:not([disabled]):hover {
+    background-color: #757575;
+}
+
+#stopRecordBtn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+#recordingStatus {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+#recordingTime {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #f44336;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-weight: bold;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.audio-preview {
+    margin: 1rem 0;
+}
+
+#saveSoundBtn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#saveSoundBtn:hover {
+    background-color: #388E3C;
+}
+
+/* 図鑑セクションのスタイル */
+.filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.search-box {
+    flex: 1;
+    min-width: 200px;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.7rem;
+    border: 1px solid #ddd;
+    border-radius: 30px;
+    font-size: 1rem;
+}
+
+.category-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.category-filter select {
+    padding: 0.7rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.sound-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.sound-card {
+    background-color: #E8F5E9;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+
+.sound-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+}
+
+.sound-card h4 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    color: #2E7D32;
+}
+
+.sound-card .category {
+    display: inline-block;
+    background-color: #81C784;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.sound-card .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.5rem;
+}
+
+.sound-card .tag {
+    background-color: #C8E6C9;
+    color: #2E7D32;
+    padding: 0.1rem 0.4rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+}
+
+.sound-card audio {
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+/* ミキサーセクションのスタイル */
+.mixer-container {
+    margin-bottom: 2rem;
+}
+
+.selected-sounds {
+    min-height: 150px;
+    border: 2px dashed #4CAF50;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.selected-sounds p {
+    width: 100%;
+    text-align: center;
+    color: #757575;
+}
+
+.mixer-controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.mixer-controls button {
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#playMixBtn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+#playMixBtn:hover {
+    background-color: #388E3C;
+}
+
+#stopMixBtn {
+    background-color: #F44336;
+    color: white;
+}
+
+#stopMixBtn:hover {
+    background-color: #D32F2F;
+}
+
+#clearMixBtn {
+    background-color: #9E9E9E;
+    color: white;
+}
+
+#clearMixBtn:hover {
+    background-color: #757575;
+}
+
+.available-sounds h3 {
+    margin-bottom: 1rem;
+}
+
+.sound-grid.small {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.sound-item {
+    background-color: #E8F5E9;
+    border-radius: 8px;
+    padding: 0.7rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: grab;
+    transition: background-color 0.2s;
+}
+
+.sound-item:hover {
+    background-color: #C8E6C9;
+}
+
+.sound-item.dragging {
+    opacity: 0.5;
+}
+
+/* 汎用クラス */
+.hidden {
+    display: none;
+}
