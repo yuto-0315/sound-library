@@ -68,6 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初期表示
     renderSoundLibrary();
     renderAvailableSounds();
+    addLearningInfo();
+    addWaveformVisualization()
 });
 
 // セクション切り替え関数
@@ -194,6 +196,7 @@ function saveSound() {
     const soundName = document.getElementById('soundName').value.trim();
     const soundCategory = document.getElementById('soundCategory').value;
     const soundTags = document.getElementById('soundTags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
+    const soundInfo = document.getElementById('soundInfo').value.trim();
 
     if (!soundName) {
         alert('音の名前を入力してください。');
@@ -213,6 +216,7 @@ function saveSound() {
             category: soundCategory,
             tags: soundTags,
             audio: base64data,
+            info: soundInfo, // 学習情報を追加
             dateCreated: new Date().toISOString()
         };
 
@@ -287,10 +291,15 @@ function renderSoundLibrary() {
         // タグのHTML生成
         const tagsHTML = sound.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
 
+        // 学習情報があれば表示
+        const infoHTML = sound.info ? 
+            `<div class="sound-info"><p>${convertTextForGrade(sound.info)}</p></div>` : '';
+
         soundCard.innerHTML = `
             <h4>${sound.name}</h4>
             <span class="category">${sound.category}</span>
             <audio controls src="${sound.audio}"></audio>
+            ${infoHTML}
             <div class="tags">${tagsHTML}</div>
         `;
 
@@ -458,4 +467,122 @@ function filterSounds() {
         
         card.style.display = shouldShow ? 'block' : 'none';
     });
+}
+
+// 学年に応じたテキスト変換関数（現在はそのまま返すだけ）
+function convertTextForGrade(text) {
+  if (!text) return '';
+  return text;
+}
+
+// 波形表示機能を修正
+function addWaveformVisualization() {
+    // 録音セクションに波形表示用のキャンバスを追加
+    const recordContainer = document.querySelector('.record-container');
+    const waveformCanvas = document.createElement('canvas');
+    waveformCanvas.id = 'waveformCanvas';
+    waveformCanvas.width = 300;
+    waveformCanvas.height = 80;
+    waveformCanvas.style.backgroundColor = '#f0f0f0';
+    waveformCanvas.style.marginTop = '10px';
+    waveformCanvas.style.display = 'none';
+    
+    recordContainer.appendChild(waveformCanvas);
+    
+    // 録音開始時の元の関数を保存
+    const originalStartRecording = window.startRecording;
+    
+    // 録音開始関数を上書き
+    window.startRecording = async function() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // 波形分析用のAudioContextを作成
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            const microphone = audioContext.createMediaStreamSource(stream);
+            microphone.connect(analyser);
+            
+            analyser.fftSize = 2048;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            // 波形の描画
+            const canvas = document.getElementById('waveformCanvas');
+            canvas.style.display = 'block';
+            const canvasCtx = canvas.getContext('2d');
+            
+            // 波形描画のアニメーション
+            let animationId;
+            function drawWaveform() {
+                animationId = requestAnimationFrame(drawWaveform);
+                
+                analyser.getByteTimeDomainData(dataArray);
+                
+                canvasCtx.fillStyle = '#f0f0f0';
+                canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                canvasCtx.lineWidth = 2;
+                canvasCtx.strokeStyle = '#4CAF50';
+                canvasCtx.beginPath();
+                
+                const sliceWidth = canvas.width * 1.0 / bufferLength;
+                let x = 0;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = v * canvas.height / 2;
+                    
+                    if (i === 0) {
+                        canvasCtx.moveTo(x, y);
+                    } else {
+                        canvasCtx.lineTo(x, y);
+                    }
+                    
+                    x += sliceWidth;
+                }
+                
+                canvasCtx.lineTo(canvas.width, canvas.height / 2);
+                canvasCtx.stroke();
+            }
+            
+            drawWaveform();
+            
+            // 元の録音開始関数を呼び出す
+            await originalStartRecording.call(this, stream);
+            
+            // 録音停止時に波形表示も停止するように設定
+            const originalStopRecording = window.stopRecording;
+            window.stopRecording = function() {
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                }
+                canvas.style.display = 'none';
+                originalStopRecording.call(this);
+            };
+            
+        } catch (error) {
+            console.error('録音を開始できませんでした:', error);
+            alert('マイクへのアクセスを許可してください。');
+        }
+    };
+}
+
+// 音に学習情報を追加する機能
+function addLearningInfo() {
+    // 新規保存時に学習情報を追加できるフォーム要素を追加
+    const saveRecordingDiv = document.getElementById('saveRecording');
+    
+    const learningInfoDiv = document.createElement('div');
+    learningInfoDiv.className = 'form-group';
+    learningInfoDiv.innerHTML = `
+        <label for="soundInfo">音の説明：</label>
+        <textarea id="soundInfo" 
+                  placeholder="この音の特徴や面白いポイントを書きましょう" 
+                  rows="4" 
+                  style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+    `;
+    
+    // 保存ボタンの前に挿入
+    const saveSoundBtn = document.getElementById('saveSoundBtn');
+    saveRecordingDiv.insertBefore(learningInfoDiv, saveSoundBtn);
 }
