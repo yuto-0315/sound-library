@@ -110,7 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAvailableSounds();
     addLearningInfo();
     addWaveformVisualization();
-    
+    addShapeSelectorToRecording();
+
     // 音楽づくり機能の初期化
     initializeTimeline();
     renderAvailableSoundsForTimeline();
@@ -232,22 +233,42 @@ async function startRecording() {
     }
 }
 
-// saveSound関数も修正
+// 録音した音を保存する関数を更新
 function saveSound() {
     const soundName = document.getElementById('soundName').value.trim();
     const soundCategory = document.getElementById('soundCategory').value;
     const soundTags = document.getElementById('soundTags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
     const soundInfo = document.getElementById('soundInfo').value.trim();
 
+    // 図形情報の取得
+    let selectedShape = 'circle';
+    let customShapeData = null;
+
+    // カスタム図形が使われているかチェック
+    const canvas = document.getElementById('customShapeCanvas');
+    if (canvas.classList.contains('active')) {
+        customShapeData = canvas.toDataURL('image/png');
+        selectedShape = 'custom';
+    } else {
+        // プリセット図形から選択されたものを取得
+        const selectedShapeEl = document.querySelector('.shape-option-recording.selected');
+        if (selectedShapeEl) {
+            selectedShape = selectedShapeEl.dataset.shape;
+        }
+    }
+
+    const shapeColor = document.getElementById('shapeColorRecording').value || '#4CAF50';
+
     if (!soundName) {
         alert('音の名前を入力してください。');
         return;
     }
 
-    // 音声データをBlob URLとして保存
-    try {
-        // Base64変換の代わりに直接Blob URLを使用
-        const audioUrl = URL.createObjectURL(audioBlob);
+    // 音声データをBase64形式に変換
+    const reader = new FileReader();
+    reader.readAsDataURL(audioBlob);
+    reader.onloadend = function () {
+        const base64data = reader.result;
 
         // 新しい音声データを作成
         const newSound = {
@@ -255,9 +276,11 @@ function saveSound() {
             name: soundName,
             category: soundCategory,
             tags: soundTags,
-            audio: audioUrl, // Blob URLとして保存
-            audioBlobType: audioBlob.type, // Blobのタイプを保存
+            audio: base64data,
             info: soundInfo,
+            shape: selectedShape,
+            customShape: customShapeData,
+            color: shapeColor,
             dateCreated: new Date().toISOString()
         };
 
@@ -268,6 +291,7 @@ function saveSound() {
         // UI更新
         renderSoundLibrary();
         renderAvailableSounds();
+        renderAvailableSoundsForTimeline();
 
         // フォームリセット
         document.getElementById('soundName').value = '';
@@ -278,10 +302,7 @@ function saveSound() {
 
         // 図鑑セクションに移動
         showSection('library');
-    } catch (error) {
-        console.error('音声の保存に失敗しました:', error);
-        alert('音声の保存中にエラーが発生しました。もう一度お試しください。');
-    }
+    };
 }
 
 // 録音時間の更新
@@ -470,6 +491,44 @@ function renderSoundLibrary() {
         });
 
         soundLibraryElement.appendChild(soundCard);
+
+        // 図形表示の生成
+        let shapeHTML = '';
+
+        if (sound.shape === 'custom' && sound.customShape) {
+            // カスタム図形の場合は画像として表示
+            shapeHTML = `<div class="sound-shape"><img src="${sound.customShape}" alt="カスタム図形" width="40" height="40"></div>`;
+        } else if (sound.shape) {
+            // プリセット図形の表示
+            let shapeSymbol = '●'; // デフォルト
+            switch (sound.shape) {
+                case 'circle': shapeSymbol = '●'; break;
+                case 'square': shapeSymbol = '■'; break;
+                case 'triangle': shapeSymbol = '▲'; break;
+                case 'star': shapeSymbol = '★'; break;
+                case 'wave': shapeSymbol = '〰'; break;
+                case 'line': shapeSymbol = '―'; break;
+                case 'zigzag': shapeSymbol = '∿'; break;
+                case 'cross': shapeSymbol = '✕'; break;
+                case 'dot': shapeSymbol = '・'; break;
+                default: shapeSymbol = '●';
+            }
+            shapeHTML = `<div class="sound-shape" style="color: ${sound.color || '#4CAF50'}">${shapeSymbol}</div>`;
+        }
+
+        // カードのHTMLを構築
+        soundCard.innerHTML = `
+           <div class="sound-card-header">
+               <h4>${sound.name}</h4>
+               <button class="delete-sound" title="削除する">✕</button>
+           </div>
+           ${shapeHTML}
+           <span class="category">${sound.category}</span>
+           <audio controls src="${audioSrc}"></audio>
+           ${infoHTML}
+           <div class="tags">${tagsHTML}</div>
+       `;
+
     });
 }
 
@@ -1021,12 +1080,12 @@ function addGradeSelector() {
     gradeSettingBtn.style.border = 'none';
     gradeSettingBtn.style.borderRadius = '4px';
     gradeSettingBtn.style.cursor = 'pointer';
-    
+
     // ヘッダーを相対位置に設定
     header.style.position = 'relative';
-    
+
     header.appendChild(gradeSettingBtn);
-    
+
     // 学年設定モーダルを作成
     const gradeModalHTML = `
     <div id="gradeSettingModal" class="modal">
@@ -1070,10 +1129,10 @@ function addGradeSelector() {
             </div>
         </div>
     </div>`;
-    
+
     // モーダルをbodyに追加
     document.body.insertAdjacentHTML('beforeend', gradeModalHTML);
-    
+
     // スタイルを追加
     const style = document.createElement('style');
     style.textContent = `
@@ -1102,25 +1161,25 @@ function addGradeSelector() {
         }
     `;
     document.head.appendChild(style);
-    
+
     // イベントリスナー
     gradeSettingBtn.addEventListener('click', () => {
         document.getElementById('gradeSettingModal').style.display = 'block';
     });
-    
+
     document.querySelector('#gradeSettingModal .close-modal').addEventListener('click', () => {
         document.getElementById('gradeSettingModal').style.display = 'none';
     });
-    
+
     document.getElementById('cancelGradeSetting').addEventListener('click', () => {
         document.getElementById('gradeSettingModal').style.display = 'none';
     });
-    
+
     document.getElementById('saveGradeSetting').addEventListener('click', () => {
         const selectedGrade = document.querySelector('input[name="grade"]:checked').value;
         saveGradeSetting(parseInt(selectedGrade));
         document.getElementById('gradeSettingModal').style.display = 'none';
-        
+
         // 図鑑を再レンダリングして表示テキストを更新
         renderSoundLibrary();
     });
@@ -1147,7 +1206,7 @@ function initializeShapeSelector() {
         option.addEventListener('click', () => {
             // 現在の選択を解除
             shapeOptions.forEach(opt => opt.classList.remove('selected'));
-            
+
             // 新しい選択を設定
             option.classList.add('selected');
             currentSelectedShape = option.dataset.shape;
@@ -1172,7 +1231,7 @@ function initializeShapeSelector() {
 function initializeTimeline() {
     // タイムライン再生ヘッドの参照を保存
     timelinePlayhead = document.querySelector('.timeline-playhead');
-    
+
     // ローカルストレージからタイムラインデータを読み込み
     const savedTracks = localStorage.getItem('timelineTracks');
     if (savedTracks) {
@@ -1203,15 +1262,15 @@ function createDefaultTrack() {
 function renderTimeline() {
     const tracksContainer = document.getElementById('timelineTracks');
     if (!tracksContainer) return;
-    
+
     tracksContainer.innerHTML = '';
-    
+
     timelineTracks.forEach(track => {
         // トラック要素の作成
         const trackElement = document.createElement('div');
         trackElement.className = 'track';
         trackElement.dataset.trackId = track.id;
-        
+
         trackElement.innerHTML = `
             <div class="track-header">
                 <span class="track-title">${track.name}</span>
@@ -1219,7 +1278,7 @@ function renderTimeline() {
             </div>
             <div class="track-content"></div>
         `;
-        
+
         // 削除ボタンのイベントリスナー
         const deleteButton = trackElement.querySelector('.delete-track');
         deleteButton.addEventListener('click', () => {
@@ -1230,31 +1289,31 @@ function renderTimeline() {
                 alert('最低1つのトラックが必要です。');
             }
         });
-        
+
         // トラックをコンテナに追加
         tracksContainer.appendChild(trackElement);
-        
+
         // トラック内の音要素を描画
         const trackContent = trackElement.querySelector('.track-content');
-        
+
         // ドラッグ＆ドロップのイベントリスナー
         trackContent.addEventListener('dragover', (e) => {
             e.preventDefault();
             trackContent.style.backgroundColor = '#f8f8f8';
         });
-        
+
         trackContent.addEventListener('dragleave', () => {
             trackContent.style.backgroundColor = '';
         });
-        
+
         trackContent.addEventListener('drop', (e) => {
             e.preventDefault();
             trackContent.style.backgroundColor = '';
-            
+
             // ドロップされたデータがタイムラインの音か、ライブラリからの音かを判断
             const timelineSoundId = e.dataTransfer.getData('application/timelineSound');
             const soundId = e.dataTransfer.getData('text/plain');
-            
+
             if (timelineSoundId) {
                 // タイムライン内での移動
                 moveTimelineSound(timelineSoundId, track.id, e.clientX, trackContent);
@@ -1262,14 +1321,14 @@ function renderTimeline() {
                 // ライブラリからの新規追加
                 const rect = trackContent.getBoundingClientRect();
                 const offsetX = e.clientX - rect.left;
-                
+
                 // 100pxごとのグリッドに合わせる（1秒 = 100px）
                 const gridPosition = Math.floor(offsetX / 100) * 100;
-                
+
                 addSoundToTimeline(track.id, soundId, gridPosition);
             }
         });
-        
+
         // 既存の音要素を再描画
         if (Array.isArray(track.sounds)) {
             track.sounds.forEach(sound => {
@@ -1280,7 +1339,7 @@ function renderTimeline() {
             });
         }
     });
-    
+
     updateTimelineView();
 }
 
@@ -1289,7 +1348,7 @@ function updateTimelineView() {
     // タイムラインの長さを調整
     const tracksContainer = document.getElementById('timelineTracks');
     if (!tracksContainer) return;
-    
+
     // すべてのトラックの最大位置を計算
     let maxPosition = 0;
     timelineTracks.forEach(track => {
@@ -1302,10 +1361,10 @@ function updateTimelineView() {
             });
         }
     });
-    
+
     // 最低表示幅を設定（1000pxまたはコンテナ幅 - 120px）
     const minWidth = Math.max(1000, maxPosition + 300);
-    
+
     // 各トラックの幅を設定
     const trackContents = tracksContainer.querySelectorAll('.track-content');
     trackContents.forEach(trackContent => {
@@ -1319,10 +1378,10 @@ function moveTimelineSound(soundElementId, targetTrackId, clientX, trackContent)
     let sourceTrackIndex = -1;
     let soundIndex = -1;
     let soundData = null;
-    
+
     for (let i = 0; i < timelineTracks.length; i++) {
         if (!Array.isArray(timelineTracks[i].sounds)) continue;
-        
+
         const index = timelineTracks[i].sounds.findIndex(s => s.id === soundElementId);
         if (index !== -1) {
             sourceTrackIndex = i;
@@ -1331,25 +1390,25 @@ function moveTimelineSound(soundElementId, targetTrackId, clientX, trackContent)
             break;
         }
     }
-    
+
     if (soundData) {
         // 元のトラックから削除
         timelineTracks[sourceTrackIndex].sounds.splice(soundIndex, 1);
-        
+
         // 新しい位置を計算
         const rect = trackContent.getBoundingClientRect();
         const offsetX = clientX - rect.left;
-        
+
         // グリッドに合わせる
         const gridPosition = Math.floor(offsetX / 100) * 100;
         soundData.position = gridPosition;
-        
+
         // 対象のトラックに追加
         const targetTrackIndex = timelineTracks.findIndex(t => t.id === targetTrackId);
         if (targetTrackIndex !== -1) {
             timelineTracks[targetTrackIndex].sounds.push(soundData);
         }
-        
+
         // 変更を保存して再描画
         saveTimelineTracks();
         renderTimeline();
@@ -1360,24 +1419,30 @@ function moveTimelineSound(soundElementId, targetTrackId, clientX, trackContent)
 function addSoundToTimeline(trackId, soundId, position) {
     const sound = soundLibrary.find(s => s.id === soundId);
     if (!sound) return;
-    
+
     // 対象のトラックを見つける
     const trackIndex = timelineTracks.findIndex(t => t.id === trackId);
     if (trackIndex === -1) return;
-    
+
+    // 音ライブラリに図形情報があるかチェック
+    const shape = sound.shape || currentSelectedShape;
+    const color = sound.color || currentShapeColor;
+    const customShape = sound.customShape || null;
+
     // タイムライン用の音オブジェクトを作成
     const timelineSound = {
         id: `timeline-sound-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         soundId: soundId,
         name: sound.name,
         position: position,
-        shape: currentSelectedShape,
-        color: currentShapeColor
+        shape: shape,
+        color: color,
+        customShape: customShape
     };
-    
+
     // トラックに追加
     timelineTracks[trackIndex].sounds.push(timelineSound);
-    
+
     // 保存して再描画
     saveTimelineTracks();
     renderTimeline();
@@ -1387,48 +1452,64 @@ function addSoundToTimeline(trackId, soundId, position) {
 function createTimelineSoundElement(timelineSound) {
     const sound = soundLibrary.find(s => s.id === timelineSound.soundId);
     if (!sound) return null;
-    
+
     const soundElement = document.createElement('div');
     soundElement.className = 'timeline-sound';
     soundElement.id = timelineSound.id;
     soundElement.style.left = `${timelineSound.position}px`;
     soundElement.style.width = '90px'; // 標準サイズ
-    soundElement.style.backgroundColor = `${timelineSound.color}20`; // 20%の透明度
-    soundElement.style.borderColor = timelineSound.color;
+    soundElement.style.backgroundColor = `${timelineSound.color || sound.color || '#4CAF50'}20`; // 20%の透明度
+    soundElement.style.borderColor = timelineSound.color || sound.color || '#4CAF50';
     soundElement.draggable = true;
-    
-    // 図形を表示
-    let shapeSymbol;
-    switch (timelineSound.shape) {
-        case 'circle': shapeSymbol = '●'; break;
-        case 'square': shapeSymbol = '■'; break;
-        case 'triangle': shapeSymbol = '▲'; break;
-        case 'star': shapeSymbol = '★'; break;
-        case 'wave': shapeSymbol = '〰'; break;
-        default: shapeSymbol = '●';
+
+    // 図形要素の生成
+    let shapeHTML = '';
+
+    // カスタム図形の場合
+    if ((timelineSound.shape === 'custom' && timelineSound.customShape) ||
+        (sound.shape === 'custom' && sound.customShape)) {
+        const customShapeData = timelineSound.customShape || sound.customShape;
+        shapeHTML = `<img src="${customShapeData}" alt="カスタム図形" width="30" height="30">`;
+    } else {
+        // プリセット図形の場合
+        const shape = timelineSound.shape || sound.shape || 'circle';
+        let shapeSymbol = '●'; // デフォルト
+        switch (shape) {
+            case 'circle': shapeSymbol = '●'; break;
+            case 'square': shapeSymbol = '■'; break;
+            case 'triangle': shapeSymbol = '▲'; break;
+            case 'star': shapeSymbol = '★'; break;
+            case 'wave': shapeSymbol = '〰'; break;
+            case 'line': shapeSymbol = '―'; break;
+            case 'zigzag': shapeSymbol = '∿'; break;
+            case 'cross': shapeSymbol = '✕'; break;
+            case 'dot': shapeSymbol = '・'; break;
+            default: shapeSymbol = '●';
+        }
+        shapeHTML = shapeSymbol;
     }
-    
+
     soundElement.innerHTML = `
-        <div class="timeline-sound-shape" style="color: ${timelineSound.color}">${shapeSymbol}</div>
+        <div class="timeline-sound-shape" style="color: ${timelineSound.color || sound.color || '#4CAF50'}">${shapeHTML}</div>
         <div class="timeline-sound-name">${sound.name}</div>
     `;
-    
+
     // ダブルクリックで試聴
     soundElement.addEventListener('dblclick', () => {
         const audio = new Audio(sound.audio);
         audio.play();
     });
-    
+
     // ドラッグ＆ドロップ
     soundElement.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('application/timelineSound', timelineSound.id);
         soundElement.style.opacity = '0.4';
     });
-    
+
     soundElement.addEventListener('dragend', () => {
         soundElement.style.opacity = '1';
     });
-    
+
     // 右クリックメニュー（音の削除）
     soundElement.addEventListener('contextmenu', (e) => {
         e.preventDefault();
@@ -1436,7 +1517,7 @@ function createTimelineSoundElement(timelineSound) {
             removeTimelineSound(timelineSound.id);
         }
     });
-    
+
     return soundElement;
 }
 
@@ -1444,7 +1525,7 @@ function createTimelineSoundElement(timelineSound) {
 function removeTimelineSound(soundElementId) {
     for (let i = 0; i < timelineTracks.length; i++) {
         if (!Array.isArray(timelineTracks[i].sounds)) continue;
-        
+
         const soundIndex = timelineTracks[i].sounds.findIndex(s => s.id === soundElementId);
         if (soundIndex !== -1) {
             timelineTracks[i].sounds.splice(soundIndex, 1);
@@ -1459,13 +1540,13 @@ function removeTimelineSound(soundElementId) {
 function addNewTrack() {
     const newTrackId = `track-${Date.now()}`;
     const trackNumber = timelineTracks.length + 1;
-    
+
     const newTrack = {
         id: newTrackId,
         name: `トラック ${trackNumber}`,
         sounds: []
     };
-    
+
     timelineTracks.push(newTrack);
     saveTimelineTracks();
     renderTimeline();
@@ -1474,12 +1555,12 @@ function addNewTrack() {
 // トラックを削除
 function deleteTrack(trackId) {
     timelineTracks = timelineTracks.filter(track => track.id !== trackId);
-    
+
     // トラック名を整理（削除後に番号を振り直す）
     timelineTracks.forEach((track, index) => {
         track.name = `トラック ${index + 1}`;
     });
-    
+
     saveTimelineTracks();
     renderTimeline();
 }
@@ -1488,12 +1569,12 @@ function deleteTrack(trackId) {
 function clearTimeline() {
     const confirmClear = confirm('タイムライン上のすべての音を削除しますか？');
     if (!confirmClear) return;
-    
+
     // 各トラックの音をクリア
     timelineTracks.forEach(track => {
         track.sounds = [];
     });
-    
+
     saveTimelineTracks();
     renderTimeline();
 }
@@ -1501,7 +1582,7 @@ function clearTimeline() {
 // タイムラインを再生
 function playTimeline() {
     if (isTimelinePlaying) return;
-    
+
     // タイムラインに音があるかチェック
     let hasSounds = false;
     for (const track of timelineTracks) {
@@ -1510,21 +1591,21 @@ function playTimeline() {
             break;
         }
     }
-    
+
     if (!hasSounds) {
         alert('再生する音がありません。タイムラインに音を追加してください。');
         return;
     }
-    
+
     // 再生状態に設定
     isTimelinePlaying = true;
-    
+
     // 再生ヘッドを表示
     if (timelinePlayhead) {
         timelinePlayhead.style.display = 'block';
         timelinePlayhead.style.left = '120px'; // トラックヘッダーの幅
     }
-    
+
     // 最も遠い音の位置を計算
     let maxPosition = 0;
     timelineTracks.forEach(track => {
@@ -1537,45 +1618,45 @@ function playTimeline() {
             });
         }
     });
-    
+
     // 再生時間の設定（100px = 1秒）
     const duration = (maxPosition / 100) * 1000; // ミリ秒単位
-    
+
     // 音の再生をスケジュール
     const startTime = Date.now();
     const scheduledSounds = [];
-    
+
     timelineTracks.forEach(track => {
         if (!Array.isArray(track.sounds)) return;
-        
+
         track.sounds.forEach(timelineSound => {
             const sound = soundLibrary.find(s => s.id === timelineSound.soundId);
             if (sound) {
                 // 再生開始時間を計算
                 const playTime = (timelineSound.position / 100) * 1000; // ミリ秒単位
-                
+
                 // 音の要素を取得
                 const element = document.getElementById(timelineSound.id);
-                
+
                 // スケジューリング情報を保存
                 scheduledSounds.push({
                     sound: sound,
                     element: element,
                     playTime: playTime
                 });
-                
+
                 // タイマーで再生
                 setTimeout(() => {
                     if (!isTimelinePlaying) return; // 再生停止されていたら何もしない
-                    
+
                     // 音を再生
                     const audio = new Audio(sound.audio);
                     audio.play();
-                    
+
                     // 再生中の視覚効果
                     if (element) {
                         element.style.boxShadow = '0 0 10px rgba(76, 175, 80, 0.8)';
-                        
+
                         // 音の長さか、デフォルト1秒後に効果を消す
                         setTimeout(() => {
                             if (element) element.style.boxShadow = 'none';
@@ -1585,21 +1666,21 @@ function playTimeline() {
             }
         });
     });
-    
+
     // 再生ヘッドのアニメーション
     const startPosition = 120; // ヘッダー幅
     const endPosition = startPosition + maxPosition + 100;
     const animationStartTime = Date.now();
-    
+
     // 再生ヘッドを動かすインターバル
     timelineInterval = setInterval(() => {
         const elapsed = Date.now() - animationStartTime;
         const position = startPosition + (elapsed / 1000) * 100; // 1秒=100px
-        
+
         if (timelinePlayhead) {
             timelinePlayhead.style.left = `${position}px`;
         }
-        
+
         // 終端に到達したら停止
         if (position >= endPosition || !isTimelinePlaying) {
             stopTimeline();
@@ -1610,25 +1691,25 @@ function playTimeline() {
 // タイムラインの再生を停止
 function stopTimeline() {
     isTimelinePlaying = false;
-    
+
     // 再生ヘッドを非表示
     if (timelinePlayhead) {
         timelinePlayhead.style.display = 'none';
     }
-    
+
     // インターバルを停止
     if (timelineInterval) {
         clearInterval(timelineInterval);
         timelineInterval = null;
     }
-    
+
     // 音の再生を全て停止
     const audioElements = document.querySelectorAll('audio');
     audioElements.forEach(audio => {
         audio.pause();
         audio.currentTime = 0;
     });
-    
+
     // 視覚効果をリセット
     const timelineSounds = document.querySelectorAll('.timeline-sound');
     timelineSounds.forEach(element => {
@@ -1649,36 +1730,179 @@ function saveTimelineTracks() {
 function renderAvailableSoundsForTimeline() {
     const container = document.getElementById('availableSoundsForTimeline');
     if (!container) return;
-    
+
     container.innerHTML = '';
-    
+
     soundLibrary.forEach(sound => {
         const soundItem = document.createElement('div');
         soundItem.className = 'sound-item';
         soundItem.dataset.id = sound.id;
-        
+
         soundItem.innerHTML = `
             <h4>${sound.name}</h4>
             <span class="category">${sound.category}</span>
         `;
-        
+
         // ドラッグ機能
         soundItem.draggable = true;
         soundItem.addEventListener('dragstart', (e) => {
             e.dataTransfer.setData('text/plain', sound.id);
             soundItem.classList.add('dragging');
         });
-        
+
         soundItem.addEventListener('dragend', () => {
             soundItem.classList.remove('dragging');
         });
-        
+
         // クリックで試聴
         soundItem.addEventListener('click', () => {
             const audio = new Audio(sound.audio);
             audio.play();
         });
-        
+
         container.appendChild(soundItem);
     });
+}
+
+// 録音時に図形を選択する機能を追加
+function addShapeSelectorToRecording() {
+    // 保存画面内に図形選択セクションを挿入
+    const saveRecordingDiv = document.getElementById('saveRecording');
+    const saveSoundBtn = document.getElementById('saveSoundBtn');
+
+    // 図形選択セクションの作成
+    const shapeSelectorDiv = document.createElement('div');
+    shapeSelectorDiv.className = 'form-group shape-selector-recording';
+    shapeSelectorDiv.innerHTML = `
+        <label>音を表す図形を選ぶ：</label>
+        <div class="shape-options-recording">
+            <div class="shape-option-recording selected" data-shape="circle">●</div>
+            <div class="shape-option-recording" data-shape="square">■</div>
+            <div class="shape-option-recording" data-shape="triangle">▲</div>
+            <div class="shape-option-recording" data-shape="star">★</div>
+            <div class="shape-option-recording" data-shape="wave">〰</div>
+            <div class="shape-option-recording" data-shape="line">―</div>
+            <div class="shape-option-recording" data-shape="zigzag">∿</div>
+            <div class="shape-option-recording" data-shape="cross">✕</div>
+            <div class="shape-option-recording" data-shape="dot">・</div>
+        </div>
+        <div class="shape-color-picker-recording">
+            <label for="shapeColorRecording">図形の色：</label>
+            <input type="color" id="shapeColorRecording" value="#4CAF50">
+        </div>
+        <div class="custom-shape-container">
+            <label for="customShapeCanvas">自分で図形を描く：</label>
+            <canvas id="customShapeCanvas" width="200" height="100"></canvas>
+            <button type="button" class="small-button" id="clearCustomShape">消去</button>
+        </div>
+    `;
+
+    // 保存ボタンの前に挿入
+    saveRecordingDiv.insertBefore(shapeSelectorDiv, saveSoundBtn);
+
+    // 図形選択のイベントリスナー設定
+    const shapeOptions = shapeSelectorDiv.querySelectorAll('.shape-option-recording');
+    shapeOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            // 現在の選択を解除
+            shapeOptions.forEach(opt => opt.classList.remove('selected'));
+
+            // 新しい選択を設定
+            option.classList.add('selected');
+
+            // カスタム図形モードを無効化
+            document.getElementById('customShapeCanvas').classList.remove('active');
+        });
+    });
+
+    // カスタム図形描画キャンバスの設定
+    initializeCustomShapeCanvas();
+}
+
+// カスタム図形描画キャンバスの初期化
+function initializeCustomShapeCanvas() {
+    const canvas = document.getElementById('customShapeCanvas');
+    const clearBtn = document.getElementById('clearCustomShape');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+
+    // 描画領域の初期化
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // マウスイベントリスナー
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseleave', stopDrawing);
+
+    // タッチイベントリスナー（モバイル対応）
+    canvas.addEventListener('touchstart', handleTouch);
+    canvas.addEventListener('touchmove', handleTouch);
+    canvas.addEventListener('touchend', stopDrawing);
+
+    // クリアボタン
+    clearBtn.addEventListener('click', () => {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    });
+
+    // 描画開始
+    function startDrawing(e) {
+        isDrawing = true;
+        draw(e);
+
+        // カスタム図形が選択されたことを示す
+        canvas.classList.add('active');
+
+        // 他の図形選択を解除
+        const shapeOptions = document.querySelectorAll('.shape-option-recording');
+        shapeOptions.forEach(opt => opt.classList.remove('selected'));
+    }
+
+    // 描画
+    function draw(e) {
+        if (!isDrawing) return;
+
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = document.getElementById('shapeColorRecording').value;
+
+        ctx.lineTo(getX(e), getY(e));
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(getX(e), getY(e));
+    }
+
+    // 描画停止
+    function stopDrawing() {
+        isDrawing = false;
+        ctx.beginPath();
+    }
+
+    // タッチイベント処理
+    function handleTouch(e) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent(
+            e.type === 'touchstart' ? 'mousedown' : 'mousemove',
+            {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            }
+        );
+        canvas.dispatchEvent(mouseEvent);
+        e.preventDefault();
+    }
+
+    // イベントからX座標を取得
+    function getX(e) {
+        const rect = canvas.getBoundingClientRect();
+        return e.clientX - rect.left;
+    }
+
+    // イベントからY座標を取得
+    function getY(e) {
+        const rect = canvas.getBoundingClientRect();
+        return e.clientY - rect.top;
+    }
 }
