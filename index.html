@@ -15,6 +15,7 @@
             <button id="recordBtn">音を録音する</button>
             <button id="libraryBtn" class="active">図鑑を見る</button>
             <button id="mixerBtn">音を組み合わせる</button>
+            <button id="composerBtn">音楽づくり</button>
         </nav>
     </header>
 
@@ -100,6 +101,56 @@
             <div class="available-sounds">
                 <h3>使える音</h3>
                 <div id="availableSoundsList" class="sound-grid small">
+                    <!-- 利用可能な音がここに表示されます -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 音楽づくりセクション -->
+        <section id="composerSection" class="hidden">
+            <h2>音楽づくり</h2>
+            
+            <div class="composer-tools">
+                <div class="shape-selector">
+                    <h3>図形を選ぶ</h3>
+                    <div class="shape-options">
+                        <div class="shape-option" data-shape="circle">●</div>
+                        <div class="shape-option" data-shape="square">■</div>
+                        <div class="shape-option" data-shape="triangle">▲</div>
+                        <div class="shape-option" data-shape="star">★</div>
+                        <div class="shape-option" data-shape="wave">〰</div>
+                    </div>
+                    <div class="shape-color-picker">
+                        <label for="shapeColor">色：</label>
+                        <input type="color" id="shapeColor" value="#4CAF50">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="timeline-container">
+                <div class="timeline-controls">
+                    <button id="playTimelineBtn" class="action-button">▶ 再生</button>
+                    <button id="stopTimelineBtn" class="action-button">■ 停止</button>
+                    <button id="addTrackBtn" class="action-button">+ トラック追加</button>
+                    <button id="clearTimelineBtn" class="action-button">消去</button>
+                </div>
+                
+                <div class="timeline-tracks" id="timelineTracks">
+                    <div class="track" data-track-id="track-1">
+                        <div class="track-header">
+                            <span class="track-title">トラック 1</span>
+                            <button class="delete-track">✕</button>
+                        </div>
+                        <div class="track-content"></div>
+                    </div>
+                </div>
+                
+                <div class="timeline-playhead"></div>
+            </div>
+            
+            <div class="available-sounds-for-timeline">
+                <h3>使える音</h3>
+                <div id="availableSoundsForTimeline" class="sound-grid small">
                     <!-- 利用可能な音がここに表示されます -->
                 </div>
             </div>
