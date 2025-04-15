@@ -1435,7 +1435,7 @@ function addSoundToTimeline(trackId, soundId, position) {
     getAudioDuration(sound.audio).then(duration => {
         // 最低幅を確保（0.5秒分）
         const widthPx = Math.max(duration * 100, 50);
-        
+
         // タイムライン用の音オブジェクトを作成
         const timelineSound = {
             id: `timeline-sound-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -1463,19 +1463,19 @@ function getAudioDuration(audioSrc) {
     return new Promise((resolve) => {
         // Base64データの場合やURL形式の場合に対応
         const audio = new Audio(audioSrc);
-        
+
         // ロード完了または十分なデータが取得できたときに長さを解決
         audio.addEventListener('loadedmetadata', () => {
             // 無限ループや不正な値を防ぐ
             const duration = isNaN(audio.duration) || !isFinite(audio.duration) ? 1 : audio.duration;
             resolve(duration);
         });
-        
+
         // ロードエラーの場合はデフォルト値を使用
         audio.addEventListener('error', () => {
             resolve(1); // デフォルトは1秒
         });
-        
+
         // すでにロード済みの場合
         if (audio.readyState >= 2) {
             const duration = isNaN(audio.duration) || !isFinite(audio.duration) ? 1 : audio.duration;
@@ -1493,7 +1493,7 @@ function createTimelineSoundElement(timelineSound) {
     soundElement.className = 'timeline-sound';
     soundElement.id = timelineSound.id;
     soundElement.style.left = `${timelineSound.position}px`;
-    
+
     // 音声の長さに応じた幅を設定
     if (timelineSound.width && timelineSound.width > 0) {
         soundElement.style.width = `${timelineSound.width}px`;
@@ -1510,7 +1510,7 @@ function createTimelineSoundElement(timelineSound) {
         // 一時的に最小幅を設定
         soundElement.style.width = '90px';
     }
-    
+
     soundElement.style.backgroundColor = `${timelineSound.color || sound.color || '#4CAF50'}20`; // 20%の透明度
     soundElement.style.borderColor = timelineSound.color || sound.color || '#4CAF50';
     soundElement.draggable = true;
@@ -1544,7 +1544,7 @@ function createTimelineSoundElement(timelineSound) {
 
     // 音声の長さ表示を追加
     const durationText = timelineSound.duration ? `${timelineSound.duration.toFixed(1)}秒` : '';
-    
+
     // 削除ボタンを追加
     soundElement.innerHTML = `
         <div class="delete-timeline-sound" title="削除">✕</div>
@@ -1753,11 +1753,11 @@ function playTimeline() {
 
         if (timelinePlayhead) {
             timelinePlayhead.style.left = `${position}px`;
-            
+
             // 再生ヘッドがビューポートの右端付近に達したらスクロール処理
             if (tracksContainer) {
                 const viewportRight = tracksContainer.scrollLeft + tracksContainer.clientWidth - 200; // 余裕を持たせる
-                
+
                 // 再生ヘッドがビューポートの右端付近に来たらスクロール
                 if (position > viewportRight) {
                     // スムーズスクロールではなく、即座にスクロール位置を設定
@@ -1814,7 +1814,7 @@ function saveTimelineTracks() {
 // 既存のタイムライントラックデータを更新
 function updateExistingTimelineTracks() {
     let needsUpdate = false;
-    
+
     // 既存のトラックをループして、音の長さ情報が欠けているものを更新
     for (const track of timelineTracks) {
         if (Array.isArray(track.sounds)) {
@@ -1833,7 +1833,7 @@ function updateExistingTimelineTracks() {
             }
         }
     }
-    
+
     // 更新が必要な場合は保存
     if (needsUpdate) {
         setTimeout(() => {
