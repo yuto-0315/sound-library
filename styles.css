@@ -560,21 +560,38 @@ footer {
     overflow: hidden;
 }
 
-.timeline-controls {
-    display: flex;
-    gap: 10px;
-    padding: 10px;
-    background-color: #f5f5f5;
-    border-bottom: 1px solid #ddd;
+/* タイムライン表示領域のスクロール設定を追加 */
+.timeline-tracks {
+    min-height: 150px; /* 200pxから150pxに減らす */
+    overflow-x: auto; /* 横方向スクロールを可能に */
+    overflow-y: hidden; /* 縦方向はスクロールしない */
+    position: relative; /* プレイヘッドのために相対位置を設定 */
+    scrollbar-width: thin; /* Firefoxのスクロールバー設定 */
+    scrollbar-color: #aaa #f0f0f0; /* Firefoxのスクロールバー色 */
 }
 
-.timeline-tracks {
-    min-height: 200px;
+/* Chromeなどのスクロールバーカスタマイズ */
+.timeline-tracks::-webkit-scrollbar {
+    height: 8px; /* 横スクロールバーの高さ */
+}
+
+.timeline-tracks::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 4px;
+}
+
+.timeline-tracks::-webkit-scrollbar-thumb {
+    background: #aaa;
+    border-radius: 4px;
+}
+
+.timeline-tracks::-webkit-scrollbar-thumb:hover {
+    background: #888;
 }
 
 .track {
     border-bottom: 1px solid #eee;
-    min-height: 80px;
+    min-height: 60px; /* 80pxから60pxに減らす */
     position: relative;
 }
 
@@ -596,8 +613,8 @@ footer {
 
 .track-content {
     margin-left: 120px;
-    min-height: 80px;
-    padding: 10px;
+    min-height: 60px; /* 80pxから60pxに減らす */
+    padding: 5px; /* 10pxから5pxに減らす */
     background-color: white;
     background-image: linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
     background-size: 100px 100%;
@@ -607,22 +624,49 @@ footer {
 .timeline-sound {
     position: absolute;
     top: 5px;
-    height: 70px;
+    height: 50px; /* 70pxから50pxに減らす */
     background-color: rgba(76, 175, 80, 0.2);
     border: 1px solid #4CAF50;
     border-radius: 4px;
-    padding: 5px;
+    padding: 3px; /* 5pxから3pxに減らす */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
     cursor: move;
     z-index: 5;
+    position: relative; /* 削除ボタンの位置決めのため */
+}
+
+/* 削除ボタンのスタイル */
+.delete-timeline-sound {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    background-color: #F44336;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0.8;
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.delete-timeline-sound:hover {
+    opacity: 1;
+    transform: scale(1.1);
 }
 
 .timeline-sound-shape {
-    font-size: 24px;
-    margin-bottom: 5px;
+    font-size: 18px; /* 24pxから18pxに減らす */
+    margin-bottom: 3px; /* 5pxから3pxに減らす */
 }
 
 .timeline-sound-name {

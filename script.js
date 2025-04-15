@@ -1,5 +1,4 @@
 // 音の図鑑 Webアプリケーション
-
 // グローバル変数
 let mediaRecorder;
 let audioChunks = [];
@@ -1237,6 +1236,8 @@ function initializeTimeline() {
     if (savedTracks) {
         try {
             timelineTracks = JSON.parse(savedTracks);
+            // 既存データの更新（音の長さ情報を追加）
+            updateExistingTimelineTracks();
             renderTimeline();
         } catch (error) {
             console.error('タイムラインデータの読み込みに失敗しました:', error);
@@ -1354,7 +1355,7 @@ function updateTimelineView() {
     timelineTracks.forEach(track => {
         if (Array.isArray(track.sounds)) {
             track.sounds.forEach(sound => {
-                const endPosition = sound.position + 100; // 仮のサイズ
+                const endPosition = sound.position + (sound.width || 100); // 音の長さを考慮
                 if (endPosition > maxPosition) {
                     maxPosition = endPosition;
                 }
@@ -1362,8 +1363,9 @@ function updateTimelineView() {
         }
     });
 
-    // 最低表示幅を設定（1000pxまたはコンテナ幅 - 120px）
-    const minWidth = Math.max(1000, maxPosition + 300);
+    // 最低表示幅を設定（コンテナ幅または最大位置 + マージン）
+    // 指定幅を増やしてスクロールに余裕を持たせる
+    const minWidth = Math.max(1200, maxPosition + 500);
 
     // 各トラックの幅を設定
     const trackContents = tracksContainer.querySelectorAll('.track-content');
@@ -1429,23 +1431,57 @@ function addSoundToTimeline(trackId, soundId, position) {
     const color = sound.color || currentShapeColor;
     const customShape = sound.customShape || null;
 
-    // タイムライン用の音オブジェクトを作成
-    const timelineSound = {
-        id: `timeline-sound-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        soundId: soundId,
-        name: sound.name,
-        position: position,
-        shape: shape,
-        color: color,
-        customShape: customShape
-    };
+    // 音声の長さを取得する（px単位で、1秒=100pxとして換算）
+    getAudioDuration(sound.audio).then(duration => {
+        // 最低幅を確保（0.5秒分）
+        const widthPx = Math.max(duration * 100, 50);
+        
+        // タイムライン用の音オブジェクトを作成
+        const timelineSound = {
+            id: `timeline-sound-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            soundId: soundId,
+            name: sound.name,
+            position: position,
+            shape: shape,
+            color: color,
+            customShape: customShape,
+            duration: duration,
+            width: widthPx
+        };
 
-    // トラックに追加
-    timelineTracks[trackIndex].sounds.push(timelineSound);
+        // トラックに追加
+        timelineTracks[trackIndex].sounds.push(timelineSound);
 
-    // 保存して再描画
-    saveTimelineTracks();
-    renderTimeline();
+        // 保存して再描画
+        saveTimelineTracks();
+        renderTimeline();
+    });
+}
+
+// 音声の長さを取得する関数
+function getAudioDuration(audioSrc) {
+    return new Promise((resolve) => {
+        // Base64データの場合やURL形式の場合に対応
+        const audio = new Audio(audioSrc);
+        
+        // ロード完了または十分なデータが取得できたときに長さを解決
+        audio.addEventListener('loadedmetadata', () => {
+            // 無限ループや不正な値を防ぐ
+            const duration = isNaN(audio.duration) || !isFinite(audio.duration) ? 1 : audio.duration;
+            resolve(duration);
+        });
+        
+        // ロードエラーの場合はデフォルト値を使用
+        audio.addEventListener('error', () => {
+            resolve(1); // デフォルトは1秒
+        });
+        
+        // すでにロード済みの場合
+        if (audio.readyState >= 2) {
+            const duration = isNaN(audio.duration) || !isFinite(audio.duration) ? 1 : audio.duration;
+            resolve(duration);
+        }
+    });
 }
 
 // タイムラインの音要素を作成
@@ -1457,7 +1493,24 @@ function createTimelineSoundElement(timelineSound) {
     soundElement.className = 'timeline-sound';
     soundElement.id = timelineSound.id;
     soundElement.style.left = `${timelineSound.position}px`;
-    soundElement.style.width = '90px'; // 標準サイズ
+    
+    // 音声の長さに応じた幅を設定
+    if (timelineSound.width && timelineSound.width > 0) {
+        soundElement.style.width = `${timelineSound.width}px`;
+    } else {
+        // widthプロパティがない古いデータの場合は、音声の長さを取得して設定
+        getAudioDuration(sound.audio).then(duration => {
+            const widthPx = Math.max(duration * 100, 50);
+            soundElement.style.width = `${widthPx}px`;
+            // データを更新
+            timelineSound.duration = duration;
+            timelineSound.width = widthPx;
+            saveTimelineTracks();
+        });
+        // 一時的に最小幅を設定
+        soundElement.style.width = '90px';
+    }
+    
     soundElement.style.backgroundColor = `${timelineSound.color || sound.color || '#4CAF50'}20`; // 20%の透明度
     soundElement.style.borderColor = timelineSound.color || sound.color || '#4CAF50';
     soundElement.draggable = true;
@@ -1489,9 +1542,15 @@ function createTimelineSoundElement(timelineSound) {
         shapeHTML = shapeSymbol;
     }
 
+    // 音声の長さ表示を追加
+    const durationText = timelineSound.duration ? `${timelineSound.duration.toFixed(1)}秒` : '';
+    
+    // 削除ボタンを追加
     soundElement.innerHTML = `
+        <div class="delete-timeline-sound" title="削除">✕</div>
         <div class="timeline-sound-shape" style="color: ${timelineSound.color || sound.color || '#4CAF50'}">${shapeHTML}</div>
         <div class="timeline-sound-name">${sound.name}</div>
+        <div class="timeline-sound-duration">${durationText}</div>
     `;
 
     // ダブルクリックで試聴
@@ -1510,7 +1569,16 @@ function createTimelineSoundElement(timelineSound) {
         soundElement.style.opacity = '1';
     });
 
-    // 右クリックメニュー（音の削除）
+    // 削除ボタンのイベントリスナーを設定
+    const deleteButton = soundElement.querySelector('.delete-timeline-sound');
+    deleteButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // イベントの伝播を停止
+        if (confirm(`「${sound.name}」をタイムラインから削除しますか？`)) {
+            removeTimelineSound(timelineSound.id);
+        }
+    });
+
+    // 右クリックメニュー（音の削除）も残しておく
     soundElement.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (confirm(`「${sound.name}」をタイムラインから削除しますか？`)) {
@@ -1607,20 +1675,24 @@ function playTimeline() {
     }
 
     // 最も遠い音の位置を計算
-    let maxPosition = 0;
+    let maxEndPosition = 0;
     timelineTracks.forEach(track => {
         if (Array.isArray(track.sounds)) {
             track.sounds.forEach(sound => {
-                const endPosition = sound.position + 100; // 仮のサイズ
-                if (endPosition > maxPosition) {
-                    maxPosition = endPosition;
+                // 音の終了位置を計算（位置 + 幅）
+                const endPosition = sound.position + (sound.width || 100);
+                if (endPosition > maxEndPosition) {
+                    maxEndPosition = endPosition;
                 }
             });
         }
     });
 
     // 再生時間の設定（100px = 1秒）
-    const duration = (maxPosition / 100) * 1000; // ミリ秒単位
+    const duration = (maxEndPosition / 100) * 1000; // ミリ秒単位
+
+    // トラックコンテナの参照を取得
+    const tracksContainer = document.querySelector('.timeline-tracks');
 
     // 音の再生をスケジュール
     const startTime = Date.now();
@@ -1642,7 +1714,8 @@ function playTimeline() {
                 scheduledSounds.push({
                     sound: sound,
                     element: element,
-                    playTime: playTime
+                    playTime: playTime,
+                    duration: timelineSound.duration || 1
                 });
 
                 // タイマーで再生
@@ -1657,10 +1730,11 @@ function playTimeline() {
                     if (element) {
                         element.style.boxShadow = '0 0 10px rgba(76, 175, 80, 0.8)';
 
-                        // 音の長さか、デフォルト1秒後に効果を消す
+                        // 音の長さに合わせて効果を消す
+                        const effectDuration = timelineSound.duration ? timelineSound.duration * 1000 : 1000;
                         setTimeout(() => {
                             if (element) element.style.boxShadow = 'none';
-                        }, audio.duration * 1000 || 1000);
+                        }, effectDuration);
                     }
                 }, playTime);
             }
@@ -1669,7 +1743,7 @@ function playTimeline() {
 
     // 再生ヘッドのアニメーション
     const startPosition = 120; // ヘッダー幅
-    const endPosition = startPosition + maxPosition + 100;
+    const endPosition = startPosition + maxEndPosition + 100;
     const animationStartTime = Date.now();
 
     // 再生ヘッドを動かすインターバル
@@ -1679,6 +1753,17 @@ function playTimeline() {
 
         if (timelinePlayhead) {
             timelinePlayhead.style.left = `${position}px`;
+            
+            // 再生ヘッドがビューポートの右端付近に達したらスクロール処理
+            if (tracksContainer) {
+                const viewportRight = tracksContainer.scrollLeft + tracksContainer.clientWidth - 200; // 余裕を持たせる
+                
+                // 再生ヘッドがビューポートの右端付近に来たらスクロール
+                if (position > viewportRight) {
+                    // スムーズスクロールではなく、即座にスクロール位置を設定
+                    tracksContainer.scrollLeft = position - (tracksContainer.clientWidth / 2);
+                }
+            }
         }
 
         // 終端に到達したら停止
@@ -1723,6 +1808,38 @@ function saveTimelineTracks() {
         localStorage.setItem('timelineTracks', JSON.stringify(timelineTracks));
     } catch (error) {
         console.error('タイムラインの保存に失敗しました:', error);
+    }
+}
+
+// 既存のタイムライントラックデータを更新
+function updateExistingTimelineTracks() {
+    let needsUpdate = false;
+    
+    // 既存のトラックをループして、音の長さ情報が欠けているものを更新
+    for (const track of timelineTracks) {
+        if (Array.isArray(track.sounds)) {
+            for (const sound of track.sounds) {
+                if (!sound.width || !sound.duration) {
+                    needsUpdate = true;
+                    const librarySound = soundLibrary.find(s => s.id === sound.soundId);
+                    if (librarySound) {
+                        // 非同期処理を使って音声の長さを取得
+                        getAudioDuration(librarySound.audio).then(duration => {
+                            sound.duration = duration;
+                            sound.width = Math.max(duration * 100, 50);
+                        });
+                    }
+                }
+            }
+        }
+    }
+    
+    // 更新が必要な場合は保存
+    if (needsUpdate) {
+        setTimeout(() => {
+            saveTimelineTracks();
+            renderTimeline();
+        }, 500); // 非同期処理の完了を待つ
     }
 }
 
