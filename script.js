@@ -464,33 +464,6 @@ function renderSoundLibrary() {
         // audioのsrc属性を正しく設定
         const audioSrc = sound.audio || '';
 
-        // 削除ボタンを追加
-        soundCard.innerHTML = `
-            <div class="sound-card-header">
-                <h4>${sound.name}</h4>
-                <button class="delete-sound" title="削除する">✕</button>
-            </div>
-            <span class="category">${sound.category}</span>
-            <audio controls src="${audioSrc}"></audio>
-            ${infoHTML}
-            <div class="tags">${tagsHTML}</div>
-        `;
-
-        // 削除ボタンのイベントリスナー
-        const deleteBtn = soundCard.querySelector('.delete-sound');
-        deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // カードのクリックイベントが発火しないようにする
-            confirmDeleteSound(sound.id);
-        });
-
-        // ミキサーに追加するためのドラッグ機能
-        soundCard.draggable = true;
-        soundCard.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', sound.id);
-        });
-
-        soundLibraryElement.appendChild(soundCard);
-
         // 図形表示の生成
         let shapeHTML = '';
 
@@ -515,7 +488,7 @@ function renderSoundLibrary() {
             shapeHTML = `<div class="sound-shape" style="color: ${sound.color || '#4CAF50'}">${shapeSymbol}</div>`;
         }
 
-        // カードのHTMLを構築
+        // カードのHTMLを構築（一度だけ）
         soundCard.innerHTML = `
            <div class="sound-card-header">
                <h4>${sound.name}</h4>
@@ -528,6 +501,20 @@ function renderSoundLibrary() {
            <div class="tags">${tagsHTML}</div>
        `;
 
+        // HTML構築後に削除ボタンのイベントリスナーを設定
+        const deleteBtn = soundCard.querySelector('.delete-sound');
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // カードのクリックイベントが発火しないようにする
+            confirmDeleteSound(sound.id);
+        });
+
+        // ミキサーに追加するためのドラッグ機能
+        soundCard.draggable = true;
+        soundCard.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', sound.id);
+        });
+
+        soundLibraryElement.appendChild(soundCard);
     });
 }
 
