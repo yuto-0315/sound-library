@@ -684,7 +684,7 @@ function convertTextForGrade(text) {
     return text;
 }
 
-// 波形表示機能を修正
+// 波形表示機能
 function addWaveformVisualization() {
     // 録音セクションに波形表示用のキャンバスを追加
     const recordContainer = document.querySelector('.record-container');
